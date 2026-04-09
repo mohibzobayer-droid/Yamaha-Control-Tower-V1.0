@@ -447,7 +447,7 @@ def compute_scenario(scenario_type: str, duration_days: int, severity_pct: float
             d = sev
         else:
             d = sev * max(0.0, 1.0 - (day - duration_days) / p["recovery_days"])
-        g_alloc = max(0.0, 70 * (1 - d / p["base_disruption"])) if p["base_disruption"] > 0 else 70.0
+        g_alloc = max(0.0, 70.0 * (1.0 - d / sev)) if sev > 0 else 70.0
         r_alloc = 100 - g_alloc
         cost    = BASE_COST_GLOBAL * (g_alloc / 100) + BASE_COST_REGIONAL * (r_alloc / 100)
         if day <= 7:
