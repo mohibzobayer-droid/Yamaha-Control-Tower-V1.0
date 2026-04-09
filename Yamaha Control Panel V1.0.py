@@ -33,10 +33,11 @@ def _load_saved_keys() -> dict:
         return {}
 
 
-def _save_keys(news_key: str, claude_key: str):
+def _save_keys(news_key: str, claude_key: str, oil_key: str = ""):
     try:
         with open(_KEYS_FILE, "w") as f:
-            json.dump({"news_api_key": news_key, "claude_api_key": claude_key}, f)
+            json.dump({"news_api_key": news_key, "claude_api_key": claude_key,
+                       "crude_oil_api_key": oil_key}, f)
     except Exception:
         pass
 st.set_page_config(
@@ -49,17 +50,20 @@ st.set_page_config(
 # SESSION STATE
 # ═══════════════════════════════════════════════════════════
 _SS_DEFAULTS = {
-    "prev_risk":        None,
-    "prev_global":      None,
-    "prev_opt":         None,
-    "news_cache":       None,
-    "news_fetched_at":  None,
-    "ai_narrative":     None,
-    "ai_fetched_at":    None,
-    "mobile":           False,
-    "news_api_enabled": True,
-    "claude_enabled":   True,
-    "crude_oil_price":  80,
+    "prev_risk":            None,
+    "prev_global":          None,
+    "prev_opt":             None,
+    "news_cache":           None,
+    "news_fetched_at":      None,
+    "ai_narrative":         None,
+    "ai_fetched_at":        None,
+    "mobile":               False,
+    "news_api_enabled":     True,
+    "claude_enabled":       True,
+    "oil_api_enabled":      True,
+    "crude_oil_slider":     80,
+    "oil_price_cache":      None,
+    "oil_price_fetched_at": None,
 }
 for _k, _v in _SS_DEFAULTS.items():
     if _k not in st.session_state:
@@ -68,8 +72,9 @@ for _k, _v in _SS_DEFAULTS.items():
 # Load persisted API keys from disk once per session
 if "api_keys_loaded" not in st.session_state:
     _disk = _load_saved_keys()
-    st.session_state["_news_api_key"]   = _disk.get("news_api_key",   "")
-    st.session_state["_claude_api_key"] = _disk.get("claude_api_key", "")
+    st.session_state["_news_api_key"]      = _disk.get("news_api_key",      "")
+    st.session_state["_claude_api_key"]    = _disk.get("claude_api_key",    "")
+    st.session_state["_crude_oil_api_key"] = _disk.get("crude_oil_api_key", "")
     st.session_state["api_keys_loaded"] = True
 
 # ═══════════════════════════════════════════════════════════
@@ -390,6 +395,31 @@ def _fallback_narrative(risk_score, status_label, global_alloc, lead_time):
         )
 
 
+def fetch_crude_oil_price(api_key: str):
+    """Fetch latest WTI crude price via Alpha Vantage (free tier, daily interval).
+    Cached for 30 minutes to stay within free-tier limits."""
+    now     = datetime.utcnow()
+    cached  = st.session_state.get("oil_price_cache")
+    fetched = st.session_state.get("oil_price_fetched_at")
+    if cached is not None and fetched and (now - fetched).seconds < 1800:
+        return cached
+    try:
+        r = requests.get(
+            "https://www.alphavantage.co/query",
+            params={"function": "WTI", "interval": "daily", "apikey": api_key},
+            timeout=5,
+        )
+        if r.status_code == 200:
+            data  = r.json()
+            price = float(data["data"][0]["value"])
+            st.session_state["oil_price_cache"]      = price
+            st.session_state["oil_price_fetched_at"] = now
+            return price
+    except Exception:
+        pass
+    return None
+
+
 # ═══════════════════════════════════════════════════════════
 # SCENARIO ENGINE
 # ═══════════════════════════════════════════════════════════
@@ -476,10 +506,11 @@ with sb.expander("🔑  API Keys", expanded=False):
         help="newsapi.org — free tier works", label_visibility="collapsed",
         disabled=not news_enabled,
     )
-    # Persist: if user typed a new key, save it; otherwise fall back to stored value
     if news_api_key_input:
         st.session_state["_news_api_key"] = news_api_key_input
-        _save_keys(news_api_key_input, st.session_state.get("_claude_api_key", ""))
+        _save_keys(news_api_key_input,
+                   st.session_state.get("_claude_api_key", ""),
+                   st.session_state.get("_crude_oil_api_key", ""))
     news_api_key = st.session_state["_news_api_key"]
     news_color = "#00e5a0" if news_enabled else "#ff4444"
     news_status = "🟢 ENABLED" if news_enabled else "🔴 DISABLED"
@@ -502,27 +533,59 @@ with sb.expander("🔑  API Keys", expanded=False):
         help="console.anthropic.com", label_visibility="collapsed",
         disabled=not claude_enabled,
     )
-    # Persist: if user typed a new key, save it; otherwise fall back to stored value
     if claude_api_key_input:
         st.session_state["_claude_api_key"] = claude_api_key_input
-        _save_keys(st.session_state.get("_news_api_key", ""), claude_api_key_input)
+        _save_keys(st.session_state.get("_news_api_key", ""),
+                   claude_api_key_input,
+                   st.session_state.get("_crude_oil_api_key", ""))
     claude_api_key = st.session_state["_claude_api_key"]
     claude_color  = "#00e5a0" if claude_enabled else "#ff4444"
     claude_status = "🟢 ENABLED" if claude_enabled else "🔴 DISABLED"
-    st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{claude_color};margin:2px 0 0 0;'>{claude_status}</p>",
+    st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{claude_color};margin:2px 0 12px 0;'>{claude_status}</p>",
+                unsafe_allow_html=True)
+
+    # Crude Oil (Alpha Vantage) row
+    col_o1, col_o2 = st.columns([3, 1])
+    with col_o1:
+        st.markdown("<p style='font-size:.75rem;margin:0;padding-top:6px;color:rgba(240,244,255,0.6);'>Crude Oil (Alpha Vantage)</p>",
+                    unsafe_allow_html=True)
+    with col_o2:
+        oil_api_enabled = st.toggle(" ", value=st.session_state.oil_api_enabled,
+                                    key="oil_toggle", help="Enable / disable live WTI crude oil price feed")
+        st.session_state.oil_api_enabled = oil_api_enabled
+
+    crude_oil_api_key_input = st.text_input(
+        "Alpha Vantage key", type="password", placeholder="Paste Alpha Vantage key…",
+        value=st.session_state["_crude_oil_api_key"],
+        help="alphavantage.co — free tier (25 req/day). Used for live WTI crude price.",
+        label_visibility="collapsed",
+        disabled=not oil_api_enabled,
+    )
+    if crude_oil_api_key_input:
+        st.session_state["_crude_oil_api_key"] = crude_oil_api_key_input
+        _save_keys(st.session_state.get("_news_api_key", ""),
+                   st.session_state.get("_claude_api_key", ""),
+                   crude_oil_api_key_input)
+    crude_oil_api_key = st.session_state["_crude_oil_api_key"]
+    oil_key_color  = "#00e5a0" if oil_api_enabled else "#ff4444"
+    oil_key_status = "🟢 ENABLED" if oil_api_enabled else "🔴 DISABLED"
+    st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{oil_key_color};margin:2px 0 0 0;'>{oil_key_status}</p>",
                 unsafe_allow_html=True)
 
     # Saved-key indicator + clear button
-    has_saved = bool(st.session_state.get("_news_api_key") or st.session_state.get("_claude_api_key"))
+    has_saved = bool(st.session_state.get("_news_api_key") or
+                     st.session_state.get("_claude_api_key") or
+                     st.session_state.get("_crude_oil_api_key"))
     if has_saved:
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
         st.markdown("<p style='font-family:DM Mono,monospace;font-size:.58rem;"
                     "color:rgba(0,229,160,0.55);margin:0 0 6px 0;'>✓ Keys saved to disk</p>",
                     unsafe_allow_html=True)
         if st.button("🗑  Clear saved keys", use_container_width=True):
-            st.session_state["_news_api_key"]   = ""
-            st.session_state["_claude_api_key"] = ""
-            _save_keys("", "")
+            st.session_state["_news_api_key"]      = ""
+            st.session_state["_claude_api_key"]    = ""
+            st.session_state["_crude_oil_api_key"] = ""
+            _save_keys("", "", "")
             st.rerun()
 
     # Clear caches when disabled
@@ -532,6 +595,9 @@ with sb.expander("🔑  API Keys", expanded=False):
     if not claude_enabled:
         st.session_state.ai_narrative  = None
         st.session_state.ai_fetched_at = None
+    if not oil_api_enabled:
+        st.session_state.oil_price_cache      = None
+        st.session_state.oil_price_fetched_at = None
 
 sb.markdown("""
 <div style="font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.15em;
@@ -543,9 +609,12 @@ sb.markdown("""
     Sliders become manual overrides.
 </p>""", unsafe_allow_html=True)
 
-geo_risk_manual  = sb.slider("Hormuz Risk",      0,   100, 15)
-insurance_manual = sb.slider("War-Risk Premium", 0.0, 1.0, 0.125, step=0.05)
-red_sea_manual   = sb.slider("Red Sea Risk",     0,   100, 20)
+geo_risk_manual  = sb.slider("Hormuz Risk", 0, 100, 15,
+                             help="Geopolitical disruption level at the Strait of Hormuz (0 = clear, 100 = fully blocked). Contributes 40% to the Risk Score.")
+insurance_manual = sb.slider("War-Risk Premium", 0.0, 1.0, 0.125, step=0.05,
+                             help="Shipping war-risk insurance surcharge as a fraction of 1.0 (e.g. 0.125 = 12.5%). Contributes 40% to Risk Score. At ≥0.40 alone triggers Critical status.")
+red_sea_manual   = sb.slider("Red Sea Risk", 0, 100, 20,
+                             help="Threat level in the Red Sea / Bab-el-Mandeb corridor (0 = calm, 100 = active attacks). Contributes 20% to the Risk Score.")
 
 sb.markdown("<div style='border-top:1px solid rgba(255,255,255,0.06);margin:12px 0'></div>",
             unsafe_allow_html=True)
@@ -554,20 +623,22 @@ sb.markdown("""
      color:rgba(240,244,255,0.32);text-transform:uppercase;margin:0 0 8px 0;">
      Commodity Index
 </div>""", unsafe_allow_html=True)
-crude_oil_price = sb.slider("Crude Oil \u2014 WTI ($/bbl)", min_value=40, max_value=150,
-                             value=st.session_state.crude_oil_price, step=1)
-st.session_state.crude_oil_price = crude_oil_price
+# key="crude_oil_slider" lets Streamlit manage session_state automatically —
+# avoids the double-drag bug caused by manually writing value= + session_state sync.
+crude_oil_manual = sb.slider("Crude Oil — WTI ($/bbl)", min_value=40, max_value=150,
+                              step=1, key="crude_oil_slider",
+                              help="Manual WTI crude price override ($40–$150/bbl). Above $80 adds up to 15 pts to the Risk Score. Overridden by live Alpha Vantage feed when key is active.")
 
-if crude_oil_price >= 110:
+if crude_oil_manual >= 110:
     oil_label, oil_color = "HIGH", "#ff4444"
-elif crude_oil_price >= 80:
+elif crude_oil_manual >= 80:
     oil_label, oil_color = "ELEVATED", "#ffb020"
 else:
     oil_label, oil_color = "NORMAL", "#00e5a0"
 sb.markdown(f"""
 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
   <span style="font-family:'DM Mono',monospace;font-size:.72rem;
-        color:rgba(240,244,255,0.65);">${crude_oil_price} / bbl</span>
+        color:rgba(240,244,255,0.65);">${crude_oil_manual} / bbl</span>
   <span style="font-family:'DM Mono',monospace;font-size:.58rem;
         color:{oil_color};letter-spacing:.1em;">{oil_label}</span>
 </div>""", unsafe_allow_html=True)
@@ -604,10 +675,22 @@ else:
     feed_class      = "feed-demo"
     feed_dot_class  = "feed-dot-amber"
 
+# Crude oil: live feed overrides slider when API key is active
+_oil_live = fetch_crude_oil_price(crude_oil_api_key) if (crude_oil_api_key and oil_api_enabled) else None
+if _oil_live is not None:
+    crude_oil_price  = _oil_live
+    oil_feed_live    = True
+else:
+    crude_oil_price  = float(crude_oil_manual)
+    oil_feed_live    = False
+
 # ═══════════════════════════════════════════════════════════
 # DECISION ENGINE
 # ═══════════════════════════════════════════════════════════
-risk_score = (geo_risk * 0.4) + ((insurance_spike / 1.0) * 100 * 0.4) + (red_sea_risk * 0.2)
+# Crude oil adds up to +15 pts when above the $80 neutral baseline (caps at $150).
+oil_risk_contrib = max(0.0, (crude_oil_price - 80.0) / 70.0 * 15.0)
+risk_score = ((geo_risk * 0.4) + ((insurance_spike / 1.0) * 100 * 0.4)
+              + (red_sea_risk * 0.2) + oil_risk_contrib)
 g75 = risk_score > 75 or insurance_spike >= 0.4
 g40 = risk_score > 40
 
@@ -729,13 +812,33 @@ else:                         st.success(alert_msg)
 # ═══════════════════════════════════════════════════════════
 st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 k1, k2, k3, k4, k5 = cols([1, 1, 1, 1, 1], gap="small")
-with k1: st.metric("Risk Score",   f"{risk_score:.1f}", delta=risk_delta)
-with k2: st.metric("Global Alloc", f"{global_alloc}%",  delta=alloc_delta)
-with k3: st.metric("Lead Time",    lead_time)
-with k4: st.metric("Optimisation", f"{opt_score:.0f}%", delta=opt_delta)
+with k1:
+    st.metric("Risk Score", f"{risk_score:.1f}", delta=risk_delta,
+              help="Composite 0–100 score. Formula: 40% Hormuz risk + 40% war-risk premium + 20% Red Sea risk + crude oil bonus (up to +15 pts above $80). Triggers: >40 → Warning, >75 or premium ≥0.40 → Critical.")
+with k2:
+    st.metric("Global Alloc", f"{global_alloc}%", delta=alloc_delta,
+              help="Share of total shipping volume routed via Hormuz (ocean freight). Stable = 70%, Warning = 40%, Critical = 0%. Delta shows change since last rerun.")
+with k3:
+    st.metric("Lead Time", lead_time,
+              help="Estimated end-to-end delivery window for the current route mix. Stable = 30–35 d (ocean), Warning = 15–20 d (mixed), Critical = 3–5 d (full overland Turkey/Morocco).")
+with k4:
+    st.metric("Optimisation", f"{opt_score:.0f}%", delta=opt_delta,
+              help="Routing efficiency index: 100% = fully optimal (zero disruption). Calculated as 100 − (Risk Score / 100 × 50), so a risk of 100 still preserves 50% efficiency via overland fallback.")
 with k5:
     oil_delta_str = "🔴 HIGH" if crude_oil_price >= 110 else ("🟡 ELEVATED" if crude_oil_price >= 80 else "🟢 NORMAL")
-    st.metric("WTI Crude Oil", f"${crude_oil_price}/bbl", delta=oil_delta_str)
+    oil_src_tag   = " · LIVE" if oil_feed_live else " · MANUAL"
+    st.metric("WTI Crude Oil", f"${crude_oil_price:.0f}/bbl", delta=f"{oil_delta_str}{oil_src_tag}",
+              help=f"WTI crude futures price ($/bbl). Normal < $80, Elevated $80–$109, High ≥ $110. Adds up to +15 pts to Risk Score above the $80 baseline (currently +{oil_risk_contrib:.1f} pts). {'Live via Alpha Vantage.' if oil_feed_live else 'Using manual slider — add Alpha Vantage key for live feed.'}")
+
+# ── Risk score & allocation logic summary ──
+st.markdown(f"""
+<div style="font-size:.68rem;color:rgba(240,244,255,0.28);font-family:'DM Mono',monospace;
+     margin:8px 0 0 2px;letter-spacing:.03em;line-height:1.8;">
+  Risk&nbsp;=&nbsp;Hormuz×0.4&nbsp;+&nbsp;Premium×0.4&nbsp;+&nbsp;RedSea×0.2&nbsp;+&nbsp;Oil&nbsp;bonus
+  &nbsp;&nbsp;│&nbsp;&nbsp;
+  Routing:&nbsp;≤40&nbsp;→&nbsp;70/30&nbsp;global/regional&nbsp;·&nbsp;>40&nbsp;→&nbsp;40/60&nbsp;·&nbsp;>75&nbsp;→&nbsp;0/100
+</div>
+""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════
 # NEWS FEED
@@ -791,6 +894,8 @@ with sig_col:
     signal_row("Hormuz Risk",      f"{geo_risk:.0f} / 100",       geo_risk,              "#ff4444", live_feeds)
     signal_row("War-Risk Premium", f"{insurance_spike*100:.1f}%", insurance_spike * 100, "#ffb020", live_feeds)
     signal_row("Red Sea Risk",     f"{red_sea_risk:.0f} / 100",   red_sea_risk,          "#e8ff47", live_feeds)
+    oil_bar_pct = min(100, max(0, (crude_oil_price - 40) / (150 - 40) * 100))
+    signal_row("WTI Crude Oil",    f"${crude_oil_price:.0f}/bbl", oil_bar_pct,           "#a78bfa", oil_feed_live)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with alloc_col:
@@ -961,12 +1066,13 @@ with st.expander("⚗️  Configure & Run Scenario", expanded=True):
     sc1, sc2, sc3 = cols([1, 1, 1])
     with sc1:
         scenario_type = st.selectbox("Scenario", list(_SCENARIO_PARAMS.keys()),
-                                     help="Preset disruption profiles.")
+                                     help="Preset disruption profile. Each preset bakes in a base severity, scramble cost penalty, and recovery period: Hormuz Closure (21-day recovery), Red Sea Escalation (14-day), Full ME Conflict (45-day), Custom (20-day, freely adjustable).")
     with sc2:
-        duration_days = st.slider("Disruption Duration (days)", 1, 90, 14)
+        duration_days = st.slider("Disruption Duration (days)", 1, 90, 14,
+                                   help="How many days the disruption stays at peak intensity. After this window the model linearly recovers over the preset recovery period.")
     with sc3:
         severity_pct = st.slider("Severity Override (%)", 0, 100, 70,
-                                  help="100% = full preset severity.")
+                                  help="Scales the preset's base disruption intensity. 100% = full preset impact, 50% = half-strength (e.g. contested strait vs full closure).")
 
     df_scenario      = compute_scenario(scenario_type, duration_days, severity_pct)
     peak_cost        = df_scenario["Cost/Unit ($)"].max()
@@ -975,10 +1081,21 @@ with st.expander("⚗️  Configure & Run Scenario", expanded=True):
     zero_global_days = int((df_scenario["Global (%)"] < 1).sum())
 
     sm1, sm2, sm3, sm4 = cols([1, 1, 1, 1], gap="small")
-    with sm1: st.metric("Peak Cost / Unit",     f"${peak_cost:,.0f}",     delta=f"+${peak_cost-BASE_COST_GLOBAL:,.0f} vs baseline")
-    with sm2: st.metric("Peak Lead Time",        f"{peak_lead:.0f} d",     delta=f"+{peak_lead-BASE_LEAD_GLOBAL:.0f} d vs baseline")
-    with sm3: st.metric("Cumulative Extra Cost", f"${total_extra_m:.1f}M", delta="5,000 units/day assumed")
-    with sm4: st.metric("Days Global = 0%",      f"{zero_global_days} d")
+    with sm1:
+        st.metric("Peak Cost / Unit", f"${peak_cost:,.0f}",
+                  delta=f"+${peak_cost-BASE_COST_GLOBAL:,.0f} vs baseline",
+                  help=f"Highest per-unit shipping cost reached during the scenario. Baseline is ${BASE_COST_GLOBAL:,} (standard ocean freight). Delta shows the premium over normal cost.")
+    with sm2:
+        st.metric("Peak Lead Time", f"{peak_lead:.0f} d",
+                  delta=f"+{peak_lead-BASE_LEAD_GLOBAL:.0f} d vs baseline",
+                  help=f"Longest delivery lead time hit during the scenario. Baseline is {BASE_LEAD_GLOBAL} days (ocean freight). Rises as volume shifts to slower overland alternatives, plus a 3-day shock spike.")
+    with sm3:
+        st.metric("Cumulative Extra Cost", f"${total_extra_m:.1f}M",
+                  delta="5,000 units/day assumed",
+                  help="Total additional spend above the baseline cost across the full scenario window (disruption + recovery). Assumes 5,000 units shipped per day. This is the all-in financial impact of the disruption.")
+    with sm4:
+        st.metric("Days Global = 0%", f"{zero_global_days} d",
+                  help="Number of days during the scenario where the Hormuz route is completely unusable (allocation drops below 1%). During these days you are 100% dependent on overland Turkey / Morocco routes.")
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
