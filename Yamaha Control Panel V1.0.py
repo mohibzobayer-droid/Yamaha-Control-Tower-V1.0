@@ -187,14 +187,14 @@ html, body, [class*="css"] {
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:99px}
 .main .block-container {
-    padding-top: 2.2rem !important; padding-bottom: 2.5rem !important;
+    padding-top: 2.5rem !important; padding-bottom: 3rem !important;
     max-width: 1300px !important;
 }
 hr { border-color: var(--glass-border) !important; }
 .stCaption, small { color:var(--text-muted) !important; font-size:.7rem !important; }
 .section-label {
     font-family: 'DM Mono', monospace; font-size: .6rem; letter-spacing: .16em;
-    color: rgba(240,244,255,0.32); text-transform: uppercase; margin: 22px 0 10px 0;
+    color: rgba(240,244,255,0.32); text-transform: uppercase; margin: 28px 0 14px 0;
 }
 .ai-card {
     background: linear-gradient(135deg, rgba(59,107,255,0.08) 0%, rgba(0,229,160,0.06) 100%);
@@ -376,8 +376,8 @@ def _fallback_narrative(risk_score, status_label, global_alloc, lead_time):
         return (
             f"Hormuz Strait disruption has pushed the composite risk score to {risk_score:.0f}/100, "
             f"eliminating global ocean freight as a viable near-term option. "
-            f"The logistics team should immediately confirm 100% volume commitment to Turkey Route D and "
-            f"engage BRI Middle Corridor operators to secure capacity within 48 hours."
+            f"The logistics team should immediately confirm 100% volume commitment to Route C (Suez Canal & Red Sea) and "
+            f"Route D (West Africa Atlantic Coast) sea lanes, and engage freight forwarders to secure vessel capacity within 48 hours."
         )
     elif status_label == "WARNING":
         return (
@@ -698,7 +698,7 @@ if g75:
     status_label, status_color = "CRITICAL", "#ff4444"
     global_alloc, regional_alloc = 0, 100
     lead_time  = "3–5 d"
-    alert_msg  = "Hormuz blocked — Route D Syria–Jordan Land (Turkey→Jordan→GCC) and Route D West Africa Regional (Morocco→W.Africa) fully activated."
+    alert_msg  = "Hormuz blocked — Route C Suez Canal & Red Sea (Turkey Mersin → Suez Canal → Red Sea → Oman) and Route D West Africa Regional (Morocco → Atlantic Coast → W.Africa) fully activated."
     alert_type = "error"
 elif g40:
     status_label, status_color = "WARNING", "#ffb020"
@@ -810,7 +810,7 @@ else:                         st.success(alert_msg)
 # ═══════════════════════════════════════════════════════════
 # KPI ROW
 # ═══════════════════════════════════════════════════════════
-st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 k1, k2, k3, k4, k5 = cols([1, 1, 1, 1, 1], gap="small")
 with k1:
     st.metric("Risk Score", f"{risk_score:.1f}", delta=risk_delta,
@@ -864,7 +864,7 @@ if live_feeds and headlines:
 # ═══════════════════════════════════════════════════════════
 # SIGNAL BARS + DONUT
 # ═══════════════════════════════════════════════════════════
-st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 sig_col, alloc_col = cols([1, 1])
 
 with sig_col:
@@ -925,7 +925,7 @@ with alloc_col:
 # ═══════════════════════════════════════════════════════════
 # TREND CHART
 # ═══════════════════════════════════════════════════════════
-st.markdown('<div class="fade-s6"><div class="section-label">30-Day Risk Trend</div></div>',
+st.markdown('<div style="height:20px"></div><div class="fade-s6"><div class="section-label">30-Day Risk Trend</div></div>',
             unsafe_allow_html=True)
 dates      = pd.date_range(start="2024-09-01", periods=30, freq="D")
 trend_vals = np.clip(risk_score + np.sin(np.linspace(0, 4*np.pi, 30)) * 15, 0, 100)
@@ -949,16 +949,16 @@ st.plotly_chart(trend_fig, use_container_width=True)
 # ═══════════════════════════════════════════════════════════
 # ROUTE MAP — accurate sea lanes, recommended route only
 # ═══════════════════════════════════════════════════════════
-st.markdown('<div class="fade-s7"><div class="section-label">Recommended Route</div></div>',
+st.markdown('<div style="height:20px"></div><div class="fade-s7"><div class="section-label">Recommended Route</div></div>',
             unsafe_allow_html=True)
 
 # Key port / chokepoint markers
 locations = {
     "Turkey (Izmir)":   dict(lat=38.4,  lon=27.1,  color="#00e5a0"),
     "Turkey (Mersin)":  dict(lat=36.8,  lon=34.6,  color="#00e5a0"),
-    "Syria Border":     dict(lat=37.0,  lon=37.0,  color="#ffb020"),
-    "Jordan (Amman)":   dict(lat=31.9,  lon=35.9,  color="#ffb020"),
-    "Gulf States":      dict(lat=25.2,  lon=55.3,  color="#e8ff47"),
+    "Suez Canal":       dict(lat=31.3,  lon=32.3,  color="#ffb020"),
+    "Red Sea":          dict(lat=20.0,  lon=38.0,  color="#ffb020"),
+    "Oman (Salalah)":   dict(lat=17.0,  lon=54.1,  color="#e8ff47"),
     "Morocco":          dict(lat=33.6,  lon=-7.6,  color="#00e5a0"),
     "Gibraltar":        dict(lat=36.14, lon=-5.35, color="#3b6bff"),
     "Europe":           dict(lat=51.9,  lon=4.5,   color="#e8ff47"),
@@ -970,9 +970,9 @@ locations = {
 _MED_SEA_LONS = [27.1, 24.0, 20.0, 15.0, 9.0, 3.0, -2.0, -8.0, 4.5]
 _MED_SEA_LATS = [38.4, 37.8, 38.2, 38.4, 40.5, 43.2, 40.5, 38.7, 51.9]
 
-# ── Route D — Syria–Jordan Land (Turkey Mersin → Syria → Jordan → Saudi Arabia / UAE / Kuwait) ──
-_SYRIA_JORDAN_LONS = [34.6, 37.0, 37.2, 36.3, 35.9, 38.5, 46.7, 55.3, 47.9]
-_SYRIA_JORDAN_LATS = [36.8, 37.0, 36.2, 33.5, 31.9, 29.5, 24.7, 25.2, 29.4]
+# ── Route C — Suez Canal & Red Sea (Turkey Mersin → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman) ──
+_SUEZ_RED_SEA_LONS = [34.6, 33.5, 32.3, 33.0, 36.5, 38.5, 42.0, 43.5, 50.0, 54.1]
+_SUEZ_RED_SEA_LATS = [36.8, 34.0, 31.3, 27.5, 23.5, 18.0, 14.5, 12.5, 15.0, 17.0]
 
 # ── Route A — Strait of Gibraltar (Morocco → Gibraltar → Algeciras → All Europe by road/rail) ──
 _GIBRALTAR_LONS = [-7.6, -6.0, -5.35, -5.45, -3.0, 1.0, 4.5]
@@ -1010,13 +1010,13 @@ elif not g75:
     shown_locations = ["Morocco", "Gibraltar", "Europe", "Turkey (Izmir)"]
 
 else:
-    # CRITICAL — Route D Syria–Jordan Land + Route D West Africa Regional
-    add_route(_SYRIA_JORDAN_LONS, _SYRIA_JORDAN_LATS,
-              "rgba(0,229,160,0.95)", "✦ Route D — Syria–Jordan Land (Recommended)", width=3)
+    # CRITICAL — Route C Suez Canal & Red Sea + Route D West Africa Regional
+    add_route(_SUEZ_RED_SEA_LONS, _SUEZ_RED_SEA_LATS,
+              "rgba(0,229,160,0.95)", "✦ Route C — Suez Canal & Red Sea (Recommended)", width=3)
     add_route(_WEST_AFRICA_LONS, _WEST_AFRICA_LATS,
               "rgba(139,92,246,0.9)", "✦ Route D — West Africa Regional (Recommended)", width=3)
-    shown_locations = ["Turkey (Mersin)", "Syria Border", "Jordan (Amman)",
-                       "Gulf States", "Morocco", "Senegal (Dakar)", "Nigeria (Lagos)"]
+    shown_locations = ["Turkey (Mersin)", "Suez Canal", "Red Sea", "Oman (Salalah)",
+                       "Morocco", "Senegal (Dakar)", "Nigeria (Lagos)"]
 
 # Draw only the markers relevant to the active route(s)
 for name, c in locations.items():
@@ -1055,42 +1055,53 @@ st.plotly_chart(map_fig, use_container_width=True)
 # ═══════════════════════════════════════════════════════════
 # ROUTE TABLE
 # ═══════════════════════════════════════════════════════════
-st.markdown('<div class="fade-s8"><div class="section-label">Route Comparison</div></div>',
+st.markdown('<div style="height:20px"></div><div class="fade-s8"><div class="section-label">Route Comparison</div></div>',
             unsafe_allow_html=True)
 metrics_df = pd.DataFrame({
     "Route": [
         "Route A — Mediterranean Sea",
         "Route A — Strait of Gibraltar",
-        "Route D — Syria–Jordan Land",
+        "Route C — Suez Canal & Red Sea",
         "Route D — West Africa Regional",
     ],
+    "Mode": ["🌊 Sea", "🌊 Sea", "🌊 Sea", "🌊 Sea"],
     "Path": [
-        "Turkey (Izmir) → Med → Italy, Greece, Spain, France, Portugal",
-        "Morocco → Gibraltar → Algeciras, Spain → All Europe (road/rail)",
-        "Turkey → Syria (land) → Jordan → Saudi Arabia, UAE, Kuwait",
-        "Morocco → Senegal, Nigeria, Ghana, Ivory Coast",
+        "Turkey (Izmir) → Mediterranean Sea → Italy · Greece · Spain · France · Portugal",
+        "Morocco → Strait of Gibraltar → Algeciras · Spain → All Europe",
+        "Turkey (Mersin) → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman",
+        "Morocco → Atlantic Coast → Senegal · Nigeria · Ghana · Ivory Coast",
     ],
-    "Lead Time": ["3–5 d", "1–2 d", "3–5 d", "2–5 d"],
-    "Hormuz Exposure": ["Zero Hormuz", "Zero Hormuz", "Zero Hormuz", "Zero Hormuz"],
+    "Lead Time": ["3–5 d", "1–2 d", "8–10 d", "5–8 d"],
+    "Distance": ["~2,500 nm", "~500 nm", "~3,200 nm", "~3,800 nm"],
+    "Cost Index": ["1.00×  (baseline)", "0.85×  (short haul)", "1.15×  (longer leg)", "1.35×  (long haul)"],
+    "Hormuz Exposure": ["None", "None", "None", "None"],
     "Status": [
         "🟢 Recommended" if not g40 else ("🟡 Contingency" if not g75 else "⚪ Standby"),
         "⚪ Standby"      if not g40 else ("🟢 Recommended" if not g75 else "⚪ Standby"),
         "⚪ Standby"      if not g75 else "🟢 Recommended",
         "⚪ Standby"      if not g75 else "🟢 Recommended",
     ],
-    "Ops": [
-        "Fully operational",
-        "Fully Operational",
-        "Active since Oct 2025",
-        "Growing Yamaha market",
-    ],
 })
-st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+st.dataframe(
+    metrics_df,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "Route":            st.column_config.TextColumn("Route",            width="medium"),
+        "Mode":             st.column_config.TextColumn("Mode",             width="small"),
+        "Path":             st.column_config.TextColumn("Sea Lane / Path",  width="large"),
+        "Lead Time":        st.column_config.TextColumn("Lead Time",        width="small"),
+        "Distance":         st.column_config.TextColumn("Distance",         width="small"),
+        "Cost Index":       st.column_config.TextColumn("Cost Index",       width="medium"),
+        "Hormuz Exposure":  st.column_config.TextColumn("Hormuz Exposure",  width="small"),
+        "Status":           st.column_config.TextColumn("Status",           width="small"),
+    },
+)
 
 # ═══════════════════════════════════════════════════════════
 # SCENARIO LAB
 # ═══════════════════════════════════════════════════════════
-st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:36px'></div>", unsafe_allow_html=True)
 st.markdown("""
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
   <div class="section-label" style="margin:0;">Scenario Lab</div>
