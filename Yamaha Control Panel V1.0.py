@@ -984,25 +984,25 @@ locations = {
     "Nigeria (Lagos)":    dict(lat=6.5,   lon=3.4,   color="#a78bfa"),
 }
 
-# ── Route A — Mediterranean Sea (Turkey Izmir → Med → Italy/Greece/Spain/France/Portugal) ──
-_MED_SEA_LONS = [27.1, 24.0, 20.0, 15.0, 9.0, 3.0, -2.0, -8.0, 4.5]
-_MED_SEA_LATS = [38.4, 37.8, 38.2, 38.4, 40.5, 43.2, 40.5, 38.7, 51.9]
+# ── Route A — Mediterranean Sea (Turkey Izmir → Med → Gibraltar → Atlantic coast → Rotterdam) ──
+_MED_SEA_LONS = [27.1, 22.0, 16.0, 12.0, 8.0, 4.5, 0.5, -2.0, -5.35, -8.0, -9.5, -9.0, -5.0, -2.0, 1.5, 4.5]
+_MED_SEA_LATS = [38.4, 36.5, 37.5, 40.5, 41.0, 43.5, 40.5, 37.0, 35.9, 37.0, 39.5, 42.5, 47.5, 49.5, 51.0, 51.9]
 
-# ── Route E — Global (Hormuz): Turkey (Mersin) → Suez Canal → Red Sea → Gulf of Aden → Strait of Hormuz → Arabian Gulf ──
-_HORMUZ_GLOBAL_LONS = [34.6, 33.0, 32.3, 34.0, 38.0, 43.5, 52.0, 56.5, 55.3]
-_HORMUZ_GLOBAL_LATS = [36.8, 33.5, 31.3, 27.0, 20.0, 12.5, 14.0, 26.5, 25.2]
+# ── Route E — Global (Hormuz): Turkey (Mersin) → Suez Canal → Red Sea → Gulf of Aden → Arabian Sea → around Oman → Strait of Hormuz → Arabian Gulf ──
+_HORMUZ_GLOBAL_LONS = [34.6, 33.0, 32.3, 34.0, 38.0, 43.5, 50.0, 57.5, 59.0, 58.0, 56.5, 55.3]
+_HORMUZ_GLOBAL_LATS = [36.8, 33.5, 31.3, 27.0, 20.0, 12.5, 12.0, 18.0, 21.5, 23.5, 26.5, 25.2]
 
 # ── Route C — Suez Canal & Red Sea (Turkey Mersin → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman) ──
 _SUEZ_RED_SEA_LONS = [34.6, 33.5, 32.3, 33.0, 36.5, 38.5, 42.0, 43.5, 50.0, 54.1]
 _SUEZ_RED_SEA_LATS = [36.8, 34.0, 31.3, 27.5, 23.5, 18.0, 14.5, 12.5, 15.0, 17.0]
 
-# ── Route B — Strait of Gibraltar (Morocco → Gibraltar → Algeciras → All Europe by road/rail) ──
-_GIBRALTAR_LONS = [-7.6, -6.0, -5.35, -5.45, -3.0, 1.0, 4.5]
-_GIBRALTAR_LATS = [33.6, 35.2, 36.14, 36.13, 38.5, 42.0, 51.9]
+# ── Route B — Strait of Gibraltar (Morocco → Gibraltar → Atlantic coast → Rotterdam) ──
+_GIBRALTAR_LONS = [-7.6, -6.0, -5.35, -6.5, -8.5, -9.5, -9.0, -5.0, -2.0, 1.5, 4.5]
+_GIBRALTAR_LATS = [33.6, 35.2, 36.14, 36.0, 37.0, 39.5, 42.5, 47.5, 49.5, 51.0, 51.9]
 
-# ── Route D — West Africa Regional (Morocco → Senegal → Nigeria → Ghana → Ivory Coast) ──
-_WEST_AFRICA_LONS = [-7.6, -13.0, -17.4, -4.0, 3.4, -0.2, -4.0]
-_WEST_AFRICA_LATS = [33.6, 20.0,  14.7,   8.5,  6.5,  5.6,  5.4]
+# ── Route D — West Africa Regional (Morocco → Atlantic coast → Senegal → Liberia → Ivory Coast → Ghana → Nigeria) ──
+_WEST_AFRICA_LONS = [-7.6, -13.0, -17.4, -16.5, -14.5, -13.0, -10.5, -6.0, -4.0, -0.2, 3.4]
+_WEST_AFRICA_LATS = [33.6, 20.0,  14.7,  12.0,  10.5,   8.5,   6.3,   4.8,  5.3,  5.5,  6.5]
 
 map_fig = go.Figure()
 
