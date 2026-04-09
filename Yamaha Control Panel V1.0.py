@@ -15,11 +15,30 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import requests
+import json
+import os
 from datetime import datetime, timedelta
 
 # ═══════════════════════════════════════════════════════════
-# PAGE CONFIG
+# API KEY PERSISTENCE  (saved to .yamaha_api_keys.json next to script)
 # ═══════════════════════════════════════════════════════════
+_KEYS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".yamaha_api_keys.json")
+
+
+def _load_saved_keys() -> dict:
+    try:
+        with open(_KEYS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_keys(news_key: str, claude_key: str):
+    try:
+        with open(_KEYS_FILE, "w") as f:
+            json.dump({"news_api_key": news_key, "claude_api_key": claude_key}, f)
+    except Exception:
+        pass
 st.set_page_config(
     page_title="Yamaha Control Tower",
     layout="wide",
@@ -45,6 +64,13 @@ _SS_DEFAULTS = {
 for _k, _v in _SS_DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
+
+# Load persisted API keys from disk once per session
+if "api_keys_loaded" not in st.session_state:
+    _disk = _load_saved_keys()
+    st.session_state["_news_api_key"]   = _disk.get("news_api_key",   "")
+    st.session_state["_claude_api_key"] = _disk.get("claude_api_key", "")
+    st.session_state["api_keys_loaded"] = True
 
 # ═══════════════════════════════════════════════════════════
 # DESIGN SYSTEM
@@ -444,11 +470,17 @@ with sb.expander("🔑  API Keys", expanded=False):
                                  key="news_toggle", help="Enable / disable NewsAPI live feed")
         st.session_state.news_api_enabled = news_enabled
 
-    news_api_key = st.text_input(
+    news_api_key_input = st.text_input(
         "NewsAPI key", type="password", placeholder="Paste NewsAPI key…",
+        value=st.session_state["_news_api_key"],
         help="newsapi.org — free tier works", label_visibility="collapsed",
         disabled=not news_enabled,
     )
+    # Persist: if user typed a new key, save it; otherwise fall back to stored value
+    if news_api_key_input:
+        st.session_state["_news_api_key"] = news_api_key_input
+        _save_keys(news_api_key_input, st.session_state.get("_claude_api_key", ""))
+    news_api_key = st.session_state["_news_api_key"]
     news_color = "#00e5a0" if news_enabled else "#ff4444"
     news_status = "🟢 ENABLED" if news_enabled else "🔴 DISABLED"
     st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{news_color};margin:2px 0 12px 0;'>{news_status}</p>",
@@ -464,15 +496,34 @@ with sb.expander("🔑  API Keys", expanded=False):
                                    key="claude_toggle", help="Enable / disable Claude AI briefing")
         st.session_state.claude_enabled = claude_enabled
 
-    claude_api_key = st.text_input(
+    claude_api_key_input = st.text_input(
         "Anthropic key", type="password", placeholder="Paste Anthropic key…",
+        value=st.session_state["_claude_api_key"],
         help="console.anthropic.com", label_visibility="collapsed",
         disabled=not claude_enabled,
     )
+    # Persist: if user typed a new key, save it; otherwise fall back to stored value
+    if claude_api_key_input:
+        st.session_state["_claude_api_key"] = claude_api_key_input
+        _save_keys(st.session_state.get("_news_api_key", ""), claude_api_key_input)
+    claude_api_key = st.session_state["_claude_api_key"]
     claude_color  = "#00e5a0" if claude_enabled else "#ff4444"
     claude_status = "🟢 ENABLED" if claude_enabled else "🔴 DISABLED"
     st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{claude_color};margin:2px 0 0 0;'>{claude_status}</p>",
                 unsafe_allow_html=True)
+
+    # Saved-key indicator + clear button
+    has_saved = bool(st.session_state.get("_news_api_key") or st.session_state.get("_claude_api_key"))
+    if has_saved:
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        st.markdown("<p style='font-family:DM Mono,monospace;font-size:.58rem;"
+                    "color:rgba(0,229,160,0.55);margin:0 0 6px 0;'>✓ Keys saved to disk</p>",
+                    unsafe_allow_html=True)
+        if st.button("🗑  Clear saved keys", use_container_width=True):
+            st.session_state["_news_api_key"]   = ""
+            st.session_state["_claude_api_key"] = ""
+            _save_keys("", "")
+            st.rerun()
 
     # Clear caches when disabled
     if not news_enabled:
