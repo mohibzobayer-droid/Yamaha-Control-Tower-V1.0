@@ -289,8 +289,10 @@ def fetch_news(api_key: str):
     now     = datetime.utcnow()
     cached  = st.session_state.news_cache
     fetched = st.session_state.news_fetched_at
-    if cached and fetched and (now - fetched).seconds < 300:
+    if cached and fetched and (now - fetched).total_seconds() < 300:
         return cached
+    # NewsAPI free tier: /v2/everything requires a `from` date (max 30 days back)
+    from_date = (now - timedelta(days=29)).strftime("%Y-%m-%d")
     queries = {
         "hormuz":  "Strait of Hormuz shipping blockade",
         "redsea":  "Red Sea shipping attack Houthi",
@@ -302,12 +304,17 @@ def fetch_news(api_key: str):
             r = requests.get(
                 "https://newsapi.org/v2/everything",
                 params={"q": q, "language": "en", "sortBy": "publishedAt",
-                        "pageSize": 5, "apiKey": api_key},
-                timeout=5,
+                        "pageSize": 5, "from": from_date, "apiKey": api_key},
+                timeout=8,
             )
-            if r.status_code != 200:
+            # NewsAPI returns HTTP 200 even for API-level errors — must check JSON status
+            payload = r.json()
+            if r.status_code != 200 or payload.get("status") == "error":
+                err_code = payload.get("code", r.status_code)
+                err_msg  = payload.get("message", "Unknown error")
+                st.session_state["_news_api_last_error"] = f"{err_code}: {err_msg}"
                 return None
-            articles    = r.json().get("articles", [])
+            articles    = payload.get("articles", [])
             topic_texts = [a.get("title","") + " " + (a.get("description") or "") for a in articles]
             scores[topic] = np.mean([_sentiment_score(t) for t in topic_texts]) if topic_texts else 20.0
             all_articles.extend(articles[:3])
@@ -324,10 +331,12 @@ def fetch_news(api_key: str):
             "insurance_est": min(1.0, scores.get("general", 20.0) / 100 * 0.6 + 0.05),
             "headlines":     headlines,
         }
-        st.session_state.news_cache      = result
-        st.session_state.news_fetched_at = now
+        st.session_state.news_cache           = result
+        st.session_state.news_fetched_at      = now
+        st.session_state["_news_api_last_error"] = None   # clear any previous error
         return result
-    except Exception:
+    except Exception as e:
+        st.session_state["_news_api_last_error"] = str(e)
         return None
 
 
@@ -336,7 +345,7 @@ def get_ai_narrative(risk_score, status_label, global_alloc, regional_alloc,
     now     = datetime.utcnow()
     cached  = st.session_state.ai_narrative
     fetched = st.session_state.ai_fetched_at
-    if cached and fetched and (now - fetched).seconds < 180:
+    if cached and fetched and (now - fetched).total_seconds() < 180:
         return cached
     headline_str = "; ".join(h["title"] for h in (headlines or [])[:3]) or "No live headlines."
     prompt = f"""You are a senior supply chain risk analyst for Yamaha Motor Co.
@@ -401,7 +410,7 @@ def fetch_crude_oil_price(api_key: str):
     now     = datetime.utcnow()
     cached  = st.session_state.get("oil_price_cache")
     fetched = st.session_state.get("oil_price_fetched_at")
-    if cached is not None and fetched and (now - fetched).seconds < 1800:
+    if cached is not None and fetched and (now - fetched).total_seconds() < 1800:
         return cached
     try:
         r = requests.get(
@@ -514,8 +523,15 @@ with sb.expander("🔑  API Keys", expanded=False):
     news_api_key = st.session_state["_news_api_key"]
     news_color = "#00e5a0" if news_enabled else "#ff4444"
     news_status = "🟢 ENABLED" if news_enabled else "🔴 DISABLED"
-    st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{news_color};margin:2px 0 12px 0;'>{news_status}</p>",
+    st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.6rem;color:{news_color};margin:2px 0 4px 0;'>{news_status}</p>",
                 unsafe_allow_html=True)
+    _news_err = st.session_state.get("_news_api_last_error")
+    if _news_err and news_enabled:
+        st.markdown(f"<p style='font-family:DM Mono,monospace;font-size:.58rem;"
+                    f"color:#ff4444;margin:0 0 12px 0;'>⚠ {_news_err}</p>",
+                    unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='margin-bottom:12px'></div>", unsafe_allow_html=True)
 
     # Anthropic row
     col_a1, col_a2 = st.columns([3, 1])
@@ -710,7 +726,7 @@ else:
     status_label, status_color = "STABLE", "#00e5a0"
     global_alloc, regional_alloc = 70, 30
     lead_time  = "30–35 d"
-    alert_msg  = "Conditions nominal — Route A Mediterranean Sea active: Turkey (Izmir Port) → Mediterranean → Italy, Greece, Spain, France, Portugal in 3–5 days."
+    alert_msg  = "Conditions nominal — Route A Mediterranean Sea (Turkey Izmir → Europe, 3–5 d) and Route E Global (Turkey Mersin → Suez → Hormuz → Arabian Gulf, 18–22 d) both active."
     alert_type = "success"
 
 opt_score = 100 - (risk_score / 100 * 50)
@@ -954,21 +970,27 @@ st.markdown('<div style="height:20px"></div><div class="fade-s7"><div class="sec
 
 # Key port / chokepoint markers
 locations = {
-    "Turkey (Izmir)":   dict(lat=38.4,  lon=27.1,  color="#00e5a0"),
-    "Turkey (Mersin)":  dict(lat=36.8,  lon=34.6,  color="#00e5a0"),
-    "Suez Canal":       dict(lat=31.3,  lon=32.3,  color="#ffb020"),
-    "Red Sea":          dict(lat=20.0,  lon=38.0,  color="#ffb020"),
-    "Oman (Salalah)":   dict(lat=17.0,  lon=54.1,  color="#e8ff47"),
-    "Morocco":          dict(lat=33.6,  lon=-7.6,  color="#00e5a0"),
-    "Gibraltar":        dict(lat=36.14, lon=-5.35, color="#3b6bff"),
-    "Europe":           dict(lat=51.9,  lon=4.5,   color="#e8ff47"),
-    "Senegal (Dakar)":  dict(lat=14.7,  lon=-17.4, color="#a78bfa"),
-    "Nigeria (Lagos)":  dict(lat=6.5,   lon=3.4,   color="#a78bfa"),
+    "Turkey (Izmir)":     dict(lat=38.4,  lon=27.1,  color="#00e5a0"),
+    "Turkey (Mersin)":    dict(lat=36.8,  lon=34.6,  color="#00e5a0"),
+    "Suez Canal":         dict(lat=31.3,  lon=32.3,  color="#ffb020"),
+    "Red Sea":            dict(lat=20.0,  lon=38.0,  color="#ffb020"),
+    "Oman (Salalah)":     dict(lat=17.0,  lon=54.1,  color="#e8ff47"),
+    "Strait of Hormuz":   dict(lat=26.5,  lon=56.5,  color="#e8ff47"),
+    "Arabian Gulf":       dict(lat=25.2,  lon=55.3,  color="#e8ff47"),
+    "Morocco":            dict(lat=33.6,  lon=-7.6,  color="#00e5a0"),
+    "Gibraltar":          dict(lat=36.14, lon=-5.35, color="#3b6bff"),
+    "Europe":             dict(lat=51.9,  lon=4.5,   color="#e8ff47"),
+    "Senegal (Dakar)":    dict(lat=14.7,  lon=-17.4, color="#a78bfa"),
+    "Nigeria (Lagos)":    dict(lat=6.5,   lon=3.4,   color="#a78bfa"),
 }
 
 # ── Route A — Mediterranean Sea (Turkey Izmir → Med → Italy/Greece/Spain/France/Portugal) ──
 _MED_SEA_LONS = [27.1, 24.0, 20.0, 15.0, 9.0, 3.0, -2.0, -8.0, 4.5]
 _MED_SEA_LATS = [38.4, 37.8, 38.2, 38.4, 40.5, 43.2, 40.5, 38.7, 51.9]
+
+# ── Route E — Global (Hormuz): Turkey (Mersin) → Suez Canal → Red Sea → Gulf of Aden → Strait of Hormuz → Arabian Gulf ──
+_HORMUZ_GLOBAL_LONS = [34.6, 33.0, 32.3, 34.0, 38.0, 43.5, 52.0, 56.5, 55.3]
+_HORMUZ_GLOBAL_LATS = [36.8, 33.5, 31.3, 27.0, 20.0, 12.5, 14.0, 26.5, 25.2]
 
 # ── Route C — Suez Canal & Red Sea (Turkey Mersin → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman) ──
 _SUEZ_RED_SEA_LONS = [34.6, 33.5, 32.3, 33.0, 36.5, 38.5, 42.0, 43.5, 50.0, 54.1]
@@ -997,9 +1019,13 @@ def add_route(lons, lats, color, name, dash="solid", width=2.5):
 # Draw only the recommended route(s) for current risk status
 if not g40:
     # STABLE — Route A Mediterranean Sea: Turkey (Izmir) → Med → Europe
+    #          Route E Global (Hormuz): Turkey (Mersin) → Suez → Red Sea → Hormuz → Arabian Gulf
     add_route(_MED_SEA_LONS, _MED_SEA_LATS,
               "rgba(59,107,255,0.95)", "✦ Route A — Mediterranean Sea (Recommended)", width=3)
-    shown_locations = ["Turkey (Izmir)", "Gibraltar", "Europe"]
+    add_route(_HORMUZ_GLOBAL_LONS, _HORMUZ_GLOBAL_LATS,
+              "rgba(232,255,71,0.9)", "✦ Route E — Global (Hormuz) (Recommended)", width=3)
+    shown_locations = ["Turkey (Izmir)", "Turkey (Mersin)", "Gibraltar", "Europe",
+                       "Suez Canal", "Red Sea", "Strait of Hormuz", "Arabian Gulf"]
 
 elif not g75:
     # WARNING — Route B Strait of Gibraltar primary; Mediterranean Sea contingency
@@ -1047,7 +1073,7 @@ map_fig.update_layout(**{
         showocean=True, oceancolor="rgb(7,10,18)",
         showcountries=True, bgcolor="rgba(0,0,0,0)",
         lataxis=dict(range=[_lat_min, 60]),
-        lonaxis=dict(range=[-25, 65]),
+        lonaxis=dict(range=[-25, 70]),
     ),
 })
 st.plotly_chart(map_fig, use_container_width=True)
@@ -1063,20 +1089,23 @@ metrics_df = pd.DataFrame({
         "Route B — Strait of Gibraltar",
         "Route C — Suez Canal & Red Sea",
         "Route D — West Africa Regional",
+        "Route E — Global (Hormuz)",
     ],
     "Path": [
         "Turkey (Izmir) → Mediterranean Sea → Italy · Greece · Spain · France · Portugal",
         "Morocco → Strait of Gibraltar → Algeciras · Spain → All Europe",
         "Turkey (Mersin) → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman",
         "Morocco → Atlantic Coast → Senegal · Nigeria · Ghana · Ivory Coast",
+        "Turkey (Mersin) → Suez Canal → Red Sea → Gulf of Aden → Strait of Hormuz → Arabian Gulf",
     ],
-    "Lead Time": ["3–5 d", "1–2 d", "8–10 d", "5–8 d"],
-    "Distance": ["~2,500 nm", "~500 nm", "~3,200 nm", "~3,800 nm"],
+    "Lead Time": ["3–5 d", "1–2 d", "8–10 d", "5–8 d", "18–22 d"],
+    "Distance":  ["~2,500 nm", "~500 nm", "~3,200 nm", "~3,800 nm", "~4,800 nm"],
     "Status": [
         "🟢 Recommended" if not g40 else ("🟡 Contingency" if not g75 else "⚪ Standby"),
         "⚪ Standby"      if not g40 else ("🟢 Recommended" if not g75 else "⚪ Standby"),
         "⚪ Standby"      if not g75 else "🟢 Recommended",
         "⚪ Standby"      if not g75 else "🟢 Recommended",
+        "🟢 Recommended" if not g40 else "🔴 Suspended",   # open only when STABLE
     ],
 })
 st.dataframe(
