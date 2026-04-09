@@ -947,19 +947,55 @@ trend_fig.update_layout(**{**PLOTLY_BASE, "height": 210})
 st.plotly_chart(trend_fig, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════
-# ROUTE MAP — recommended route only
+# ROUTE MAP — accurate sea lanes, recommended route only
 # ═══════════════════════════════════════════════════════════
 st.markdown('<div class="fade-s7"><div class="section-label">Recommended Route</div></div>',
             unsafe_allow_html=True)
+
+# Key port / chokepoint markers
 locations = {
-    "Japan":     dict(lat=36.2,  lon=138.2, color="#3b6bff"),
-    "Dubai":     dict(lat=25.2,  lon=55.3,  color="#ff4444"),
-    "Turkey":    dict(lat=38.9,  lon=35.2,  color="#00e5a0"),
-    "Morocco":   dict(lat=31.8,  lon=-7.6,  color="#00e5a0"),
-    "Europe":    dict(lat=50.0,  lon=10.0,  color="#e8ff47"),
-    "Singapore": dict(lat=1.3,   lon=103.8, color="#8b5cf6"),
-    "Hormuz":    dict(lat=26.5,  lon=56.3,  color="#ff4444"),
+    "Japan":            dict(lat=35.4,  lon=139.6, color="#3b6bff"),
+    "Singapore":        dict(lat=1.3,   lon=103.8, color="#8b5cf6"),
+    "Hormuz":           dict(lat=26.5,  lon=56.5,  color="#ff4444"),
+    "Bab-el-Mandeb":    dict(lat=12.5,  lon=43.5,  color="#ffb020"),
+    "Suez":             dict(lat=31.3,  lon=32.3,  color="#ffb020"),
+    "Turkey (Mersin)":  dict(lat=36.8,  lon=34.6,  color="#00e5a0"),
+    "Morocco":          dict(lat=33.6,  lon=-7.6,  color="#00e5a0"),
+    "C. of Good Hope":  dict(lat=-34.4, lon=18.5,  color="#a78bfa"),
+    "Europe":           dict(lat=51.9,  lon=4.5,   color="#e8ff47"),
 }
+
+# ── Accurate sea lane waypoints ────────────────────────────
+# Shared trunk: Japan → South China Sea → Singapore → Malacca exit
+_TRUNK_LONS = [139.6, 131.0, 124.0, 120.0, 115.0, 108.0, 103.8, 98.5]
+_TRUNK_LATS = [35.4,  32.0,  28.0,  24.0,  18.0,  5.0,   1.3,   5.5]
+
+# Route A — Global via Hormuz (Persian Gulf → Red Sea → Suez → Mediterranean → Europe)
+_HORMUZ_LONS = _TRUNK_LONS + [88.0, 75.0, 65.0, 60.0, 56.5,  # Indian Ocean → Hormuz
+                               58.0, 52.0, 47.5, 43.5,         # back out → Gulf of Aden → Bab-el-Mandeb
+                               38.5, 34.0, 32.5, 32.3,         # Red Sea → Suez
+                               27.0, 17.0,  8.0, -5.5,  4.5]  # Mediterranean → Gibraltar → Europe
+_HORMUZ_LATS = _TRUNK_LATS + [8.0, 10.0, 17.0, 22.5, 26.5,
+                               24.5, 14.0, 12.0, 12.5,
+                               20.0, 27.0, 29.9, 31.3,
+                               33.5, 35.5, 38.0, 36.0, 51.9]
+
+# Route B — Regional Turkey (Suez, no Persian Gulf → Turkey Mersin port)
+_TURKEY_LONS = _TRUNK_LONS + [82.0, 65.0, 50.0, 43.5,         # Indian Ocean → Bab-el-Mandeb
+                               38.5, 34.0, 32.5, 32.3,         # Red Sea → Suez
+                               30.0, 34.6]                     # E Mediterranean → Turkey
+_TURKEY_LATS = _TRUNK_LATS + [8.0, 12.0, 12.0, 12.5,
+                               20.0, 27.0, 29.9, 31.3,
+                               34.0, 36.8]
+
+# Route C — Alt Morocco via Cape of Good Hope (avoids all Middle East chokepoints)
+_MOROCCO_LONS = _TRUNK_LONS + [85.0, 68.0, 45.0, 18.5,        # Indian Ocean S → Cape of Good Hope
+                                5.0, -5.0, -12.0, -17.0,       # S Atlantic → W Africa
+                               -15.0, -7.6]                    # Canary Islands → Morocco
+_MOROCCO_LATS = _TRUNK_LATS + [-5.0, -20.0, -30.0, -34.4,
+                                -28.0, -18.0, -5.0,  10.0,
+                                 27.0,  33.6]
+
 map_fig = go.Figure()
 
 
@@ -972,32 +1008,32 @@ def add_route(lons, lats, color, name, dash="solid", width=2.5):
     ))
 
 
-# Only draw the route(s) that are currently recommended
+# Draw only the recommended route(s) for current risk status
 if not g40:
-    # STABLE — Global (Hormuz) is optimal
-    add_route([138.2, 56.3, 55.3, 10.0], [36.2, 26.5, 25.2, 50.0],
-              "rgba(59,107,255,0.95)", "✦ Global — Hormuz (Recommended)", width=3.5)
-elif not g75:
-    # WARNING — shift to Regional Turkey as primary, Morocco as fallback
-    add_route([138.2, 35.2, 10.0], [36.2, 38.9, 50.0],
-              "rgba(0,229,160,0.95)", "✦ Regional — Turkey (Recommended)", width=3.5)
-    add_route([138.2, 103.8, -7.6, 10.0], [36.2, 1.3, 31.8, 50.0],
-              "rgba(139,92,246,0.7)", "Alt — Morocco", dash="dash", width=2)
-else:
-    # CRITICAL — both overland routes active, Hormuz bypassed entirely
-    add_route([138.2, 35.2, 10.0], [36.2, 38.9, 50.0],
-              "rgba(0,229,160,0.95)", "✦ Regional — Turkey (Recommended)", width=3.5)
-    add_route([138.2, 103.8, -7.6, 10.0], [36.2, 1.3, 31.8, 50.0],
-              "rgba(139,92,246,0.9)", "✦ Alt — Morocco (Recommended)", width=3)
+    # STABLE — Global via Hormuz is optimal
+    add_route(_HORMUZ_LONS, _HORMUZ_LATS,
+              "rgba(59,107,255,0.95)", "✦ Global — via Hormuz (Recommended)", width=3)
+    shown_locations = ["Japan", "Singapore", "Hormuz", "Bab-el-Mandeb", "Suez", "Europe"]
 
-# Determine which location markers to show based on recommended routes
-if not g40:
-    shown_locations = ["Japan", "Hormuz", "Dubai", "Europe"]
 elif not g75:
-    shown_locations = ["Japan", "Turkey", "Europe", "Singapore", "Morocco"]
-else:
-    shown_locations = ["Japan", "Turkey", "Morocco", "Europe", "Singapore"]
+    # WARNING — Turkey via Suez as primary, Morocco via Cape as contingency
+    add_route(_TURKEY_LONS, _TURKEY_LATS,
+              "rgba(0,229,160,0.95)", "✦ Regional — Turkey via Suez (Recommended)", width=3)
+    add_route(_MOROCCO_LONS, _MOROCCO_LATS,
+              "rgba(139,92,246,0.65)", "Alt — Morocco via Cape of Good Hope", dash="dash", width=2)
+    shown_locations = ["Japan", "Singapore", "Bab-el-Mandeb", "Suez",
+                       "Turkey (Mersin)", "C. of Good Hope", "Morocco"]
 
+else:
+    # CRITICAL — both non-Hormuz routes active
+    add_route(_TURKEY_LONS, _TURKEY_LATS,
+              "rgba(0,229,160,0.95)", "✦ Regional — Turkey via Suez (Recommended)", width=3)
+    add_route(_MOROCCO_LONS, _MOROCCO_LATS,
+              "rgba(139,92,246,0.9)", "✦ Alt — Morocco via Cape of Good Hope (Recommended)", width=3)
+    shown_locations = ["Japan", "Singapore", "Bab-el-Mandeb", "Suez",
+                       "Turkey (Mersin)", "C. of Good Hope", "Morocco"]
+
+# Draw only the markers relevant to the active route(s)
 for name, c in locations.items():
     if name not in shown_locations:
         continue
@@ -1010,9 +1046,12 @@ for name, c in locations.items():
         showlegend=False,
         hovertemplate=f"<b>{name}</b><extra></extra>",
     ))
+
+# Expand lat/lon range to show Cape of Good Hope route if needed
+_lat_min = -42 if (g40 or g75) else -10
 map_fig.update_layout(**{
-    **PLOTLY_BASE, "height": 400,
-    "margin": dict(l=0,r=0,t=0,b=0), "showlegend": True,
+    **PLOTLY_BASE, "height": 450,
+    "margin": dict(l=0, r=0, t=0, b=0), "showlegend": True,
     "legend": dict(orientation="h", y=-0.03, x=0.5, xanchor="center",
                    bgcolor="rgba(0,0,0,0)", font=dict(size=11, color="#64748b")),
     "geo": dict(
@@ -1022,7 +1061,8 @@ map_fig.update_layout(**{
         countrycolor="rgb(25,35,58)",   countrywidth=0.4,
         showocean=True, oceancolor="rgb(7,10,18)",
         showcountries=True, bgcolor="rgba(0,0,0,0)",
-        lataxis=dict(range=[-15,70]), lonaxis=dict(range=[-30,160]),
+        lataxis=dict(range=[_lat_min, 65]),
+        lonaxis=dict(range=[-25, 150]),
     ),
 })
 st.plotly_chart(map_fig, use_container_width=True)
