@@ -704,7 +704,7 @@ elif g40:
     status_label, status_color = "WARNING", "#ffb020"
     global_alloc, regional_alloc = 40, 60
     lead_time  = "15–20 d"
-    alert_msg  = "Insurance premiums rising — Route A Strait of Gibraltar (Morocco→Algeciras→Europe, 1–2 d) primary; Route A Mediterranean Sea (Turkey Izmir→Europe, 3–5 d) as contingency."
+    alert_msg  = "Insurance premiums rising — Route B Strait of Gibraltar (Morocco→Algeciras→Europe, 1–2 d) primary; Route A Mediterranean Sea (Turkey Izmir→Europe, 3–5 d) as contingency."
     alert_type = "warning"
 else:
     status_label, status_color = "STABLE", "#00e5a0"
@@ -974,7 +974,7 @@ _MED_SEA_LATS = [38.4, 37.8, 38.2, 38.4, 40.5, 43.2, 40.5, 38.7, 51.9]
 _SUEZ_RED_SEA_LONS = [34.6, 33.5, 32.3, 33.0, 36.5, 38.5, 42.0, 43.5, 50.0, 54.1]
 _SUEZ_RED_SEA_LATS = [36.8, 34.0, 31.3, 27.5, 23.5, 18.0, 14.5, 12.5, 15.0, 17.0]
 
-# ── Route A — Strait of Gibraltar (Morocco → Gibraltar → Algeciras → All Europe by road/rail) ──
+# ── Route B — Strait of Gibraltar (Morocco → Gibraltar → Algeciras → All Europe by road/rail) ──
 _GIBRALTAR_LONS = [-7.6, -6.0, -5.35, -5.45, -3.0, 1.0, 4.5]
 _GIBRALTAR_LATS = [33.6, 35.2, 36.14, 36.13, 38.5, 42.0, 51.9]
 
@@ -1002,9 +1002,9 @@ if not g40:
     shown_locations = ["Turkey (Izmir)", "Gibraltar", "Europe"]
 
 elif not g75:
-    # WARNING — Route A Strait of Gibraltar primary; Mediterranean Sea contingency
+    # WARNING — Route B Strait of Gibraltar primary; Mediterranean Sea contingency
     add_route(_GIBRALTAR_LONS, _GIBRALTAR_LATS,
-              "rgba(0,229,160,0.95)", "✦ Route A — Strait of Gibraltar (Recommended)", width=3)
+              "rgba(0,229,160,0.95)", "✦ Route B — Strait of Gibraltar (Recommended)", width=3)
     add_route(_MED_SEA_LONS, _MED_SEA_LATS,
               "rgba(59,107,255,0.65)", "Alt — Route A Mediterranean Sea", dash="dash", width=2)
     shown_locations = ["Morocco", "Gibraltar", "Europe", "Turkey (Izmir)"]
@@ -1033,7 +1033,7 @@ for name, c in locations.items():
     ))
 
 # Expand lat/lon range to show West Africa route if needed
-_lat_min = -10 if not g75 else -5
+_lat_min = -10 if g75 else -5
 map_fig.update_layout(**{
     **PLOTLY_BASE, "height": 450,
     "margin": dict(l=0, r=0, t=0, b=0), "showlegend": True,
@@ -1060,11 +1060,10 @@ st.markdown('<div style="height:20px"></div><div class="fade-s8"><div class="sec
 metrics_df = pd.DataFrame({
     "Route": [
         "Route A — Mediterranean Sea",
-        "Route A — Strait of Gibraltar",
+        "Route B — Strait of Gibraltar",
         "Route C — Suez Canal & Red Sea",
         "Route D — West Africa Regional",
     ],
-    "Mode": ["🌊 Sea", "🌊 Sea", "🌊 Sea", "🌊 Sea"],
     "Path": [
         "Turkey (Izmir) → Mediterranean Sea → Italy · Greece · Spain · France · Portugal",
         "Morocco → Strait of Gibraltar → Algeciras · Spain → All Europe",
@@ -1073,8 +1072,6 @@ metrics_df = pd.DataFrame({
     ],
     "Lead Time": ["3–5 d", "1–2 d", "8–10 d", "5–8 d"],
     "Distance": ["~2,500 nm", "~500 nm", "~3,200 nm", "~3,800 nm"],
-    "Cost Index": ["1.00×  (baseline)", "0.85×  (short haul)", "1.15×  (longer leg)", "1.35×  (long haul)"],
-    "Hormuz Exposure": ["None", "None", "None", "None"],
     "Status": [
         "🟢 Recommended" if not g40 else ("🟡 Contingency" if not g75 else "⚪ Standby"),
         "⚪ Standby"      if not g40 else ("🟢 Recommended" if not g75 else "⚪ Standby"),
@@ -1087,14 +1084,11 @@ st.dataframe(
     use_container_width=True,
     hide_index=True,
     column_config={
-        "Route":            st.column_config.TextColumn("Route",            width="medium"),
-        "Mode":             st.column_config.TextColumn("Mode",             width="small"),
-        "Path":             st.column_config.TextColumn("Sea Lane / Path",  width="large"),
-        "Lead Time":        st.column_config.TextColumn("Lead Time",        width="small"),
-        "Distance":         st.column_config.TextColumn("Distance",         width="small"),
-        "Cost Index":       st.column_config.TextColumn("Cost Index",       width="medium"),
-        "Hormuz Exposure":  st.column_config.TextColumn("Hormuz Exposure",  width="small"),
-        "Status":           st.column_config.TextColumn("Status",           width="small"),
+        "Route":     st.column_config.TextColumn("Route",           width="medium"),
+        "Path":      st.column_config.TextColumn("Sea Lane / Path", width="large"),
+        "Lead Time": st.column_config.TextColumn("Lead Time",       width="small"),
+        "Distance":  st.column_config.TextColumn("Distance",        width="small"),
+        "Status":    st.column_config.TextColumn("Status",          width="small"),
     },
 )
 
