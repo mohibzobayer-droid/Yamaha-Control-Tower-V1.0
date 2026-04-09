@@ -40,6 +40,7 @@ _SS_DEFAULTS = {
     "mobile":           False,
     "news_api_enabled": True,
     "claude_enabled":   True,
+    "crude_oil_price":  80,
 }
 for _k, _v in _SS_DEFAULTS.items():
     if _k not in st.session_state:
@@ -495,6 +496,31 @@ geo_risk_manual  = sb.slider("Hormuz Risk",      0,   100, 15)
 insurance_manual = sb.slider("War-Risk Premium", 0.0, 1.0, 0.125, step=0.05)
 red_sea_manual   = sb.slider("Red Sea Risk",     0,   100, 20)
 
+sb.markdown("<div style='border-top:1px solid rgba(255,255,255,0.06);margin:12px 0'></div>",
+            unsafe_allow_html=True)
+sb.markdown("""
+<div style="font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.15em;
+     color:rgba(240,244,255,0.32);text-transform:uppercase;margin:0 0 8px 0;">
+     Commodity Index
+</div>""", unsafe_allow_html=True)
+crude_oil_price = sb.slider("Crude Oil \u2014 WTI ($/bbl)", min_value=40, max_value=150,
+                             value=st.session_state.crude_oil_price, step=1)
+st.session_state.crude_oil_price = crude_oil_price
+
+if crude_oil_price >= 110:
+    oil_label, oil_color = "HIGH", "#ff4444"
+elif crude_oil_price >= 80:
+    oil_label, oil_color = "ELEVATED", "#ffb020"
+else:
+    oil_label, oil_color = "NORMAL", "#00e5a0"
+sb.markdown(f"""
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+  <span style="font-family:'DM Mono',monospace;font-size:.72rem;
+        color:rgba(240,244,255,0.65);">${crude_oil_price} / bbl</span>
+  <span style="font-family:'DM Mono',monospace;font-size:.58rem;
+        color:{oil_color};letter-spacing:.1em;">{oil_label}</span>
+</div>""", unsafe_allow_html=True)
+
 sb.markdown("""
 <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;margin-top:16px;">
   <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.12em;
@@ -651,11 +677,14 @@ else:                         st.success(alert_msg)
 # KPI ROW
 # ═══════════════════════════════════════════════════════════
 st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-k1, k2, k3, k4 = cols([1, 1, 1, 1], gap="small")
+k1, k2, k3, k4, k5 = cols([1, 1, 1, 1, 1], gap="small")
 with k1: st.metric("Risk Score",   f"{risk_score:.1f}", delta=risk_delta)
 with k2: st.metric("Global Alloc", f"{global_alloc}%",  delta=alloc_delta)
 with k3: st.metric("Lead Time",    lead_time)
 with k4: st.metric("Optimisation", f"{opt_score:.0f}%", delta=opt_delta)
+with k5:
+    oil_delta_str = "🔴 HIGH" if crude_oil_price >= 110 else ("🟡 ELEVATED" if crude_oil_price >= 80 else "🟢 NORMAL")
+    st.metric("WTI Crude Oil", f"${crude_oil_price}/bbl", delta=oil_delta_str)
 
 # ═══════════════════════════════════════════════════════════
 # NEWS FEED
@@ -762,9 +791,9 @@ trend_fig.update_layout(**{**PLOTLY_BASE, "height": 210})
 st.plotly_chart(trend_fig, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════
-# ROUTE MAP
+# ROUTE MAP — recommended route only
 # ═══════════════════════════════════════════════════════════
-st.markdown('<div class="fade-s7"><div class="section-label">Global Route Network</div></div>',
+st.markdown('<div class="fade-s7"><div class="section-label">Recommended Route</div></div>',
             unsafe_allow_html=True)
 locations = {
     "Japan":     dict(lat=36.2,  lon=138.2, color="#3b6bff"),
@@ -787,11 +816,35 @@ def add_route(lons, lats, color, name, dash="solid", width=2.5):
     ))
 
 
-add_route([138.2,56.3,55.3,10.0], [36.2,26.5,25.2,50.0], "rgba(59,107,255,0.65)",  "Global (Hormuz)", width=2.5)
-add_route([138.2,35.2,10.0],      [36.2,38.9,50.0],       "rgba(0,229,160,0.8)",   "Regional (Turkey)", dash="dot", width=2)
-if regional_alloc > 30:
-    add_route([138.2,103.8,-7.6,10.0], [36.2,1.3,31.8,50.0], "rgba(139,92,246,0.6)", "Alt (Morocco)", dash="dash", width=1.5)
+# Only draw the route(s) that are currently recommended
+if not g40:
+    # STABLE — Global (Hormuz) is optimal
+    add_route([138.2, 56.3, 55.3, 10.0], [36.2, 26.5, 25.2, 50.0],
+              "rgba(59,107,255,0.95)", "✦ Global — Hormuz (Recommended)", width=3.5)
+elif not g75:
+    # WARNING — shift to Regional Turkey as primary, Morocco as fallback
+    add_route([138.2, 35.2, 10.0], [36.2, 38.9, 50.0],
+              "rgba(0,229,160,0.95)", "✦ Regional — Turkey (Recommended)", width=3.5)
+    add_route([138.2, 103.8, -7.6, 10.0], [36.2, 1.3, 31.8, 50.0],
+              "rgba(139,92,246,0.7)", "Alt — Morocco", dash="dash", width=2)
+else:
+    # CRITICAL — both overland routes active, Hormuz bypassed entirely
+    add_route([138.2, 35.2, 10.0], [36.2, 38.9, 50.0],
+              "rgba(0,229,160,0.95)", "✦ Regional — Turkey (Recommended)", width=3.5)
+    add_route([138.2, 103.8, -7.6, 10.0], [36.2, 1.3, 31.8, 50.0],
+              "rgba(139,92,246,0.9)", "✦ Alt — Morocco (Recommended)", width=3)
+
+# Determine which location markers to show based on recommended routes
+if not g40:
+    shown_locations = ["Japan", "Hormuz", "Dubai", "Europe"]
+elif not g75:
+    shown_locations = ["Japan", "Turkey", "Europe", "Singapore", "Morocco"]
+else:
+    shown_locations = ["Japan", "Turkey", "Morocco", "Europe", "Singapore"]
+
 for name, c in locations.items():
+    if name not in shown_locations:
+        continue
     map_fig.add_trace(go.Scattergeo(
         lon=[c["lon"]], lat=[c["lat"]], mode="markers+text", text=[name],
         textposition="top center",
