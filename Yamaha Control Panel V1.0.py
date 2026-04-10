@@ -1022,7 +1022,7 @@ if not g40:
     # STABLE — Route A Mediterranean Sea: Turkey (Izmir) → Med → Europe
     #          Route E Global (Hormuz): Turkey (Mersin) → Suez → Red Sea → Hormuz → Arabian Gulf
     add_route(_MED_SEA_LONS, _MED_SEA_LATS,
-              "rgba(59,107,255,0.95)", "✦ Route A — Mediterranean Sea (Recommended)", width=3)
+              "rgba(59,107,255,0.95)", "✦ Route A — Mediterranean Sea", width=3)
     add_route(_HORMUZ_GLOBAL_LONS, _HORMUZ_GLOBAL_LATS,
               "rgba(232,255,71,0.9)", "✦ Route E — Global (Hormuz)", width=3)
     shown_locations = ["Turkey (Izmir)", "Japan", "Gibraltar", "Europe",
@@ -1031,7 +1031,7 @@ if not g40:
 elif not g75:
     # WARNING — Route B Strait of Gibraltar primary; Mediterranean Sea contingency
     add_route(_GIBRALTAR_LONS, _GIBRALTAR_LATS,
-              "rgba(0,229,160,0.95)", "✦ Route B — Strait of Gibraltar (Recommended)", width=3)
+              "rgba(0,229,160,0.95)", "✦ Route B — Strait of Gibraltar", width=3)
     add_route(_MED_SEA_LONS, _MED_SEA_LATS,
               "rgba(59,107,255,0.65)", "Alt — Route A Mediterranean Sea", dash="dash", width=2)
     shown_locations = ["Morocco", "Gibraltar", "Europe", "Turkey (Izmir)"]
@@ -1039,9 +1039,9 @@ elif not g75:
 else:
     # CRITICAL — Route C Suez Canal & Red Sea + Route D West Africa Regional
     add_route(_SUEZ_RED_SEA_LONS, _SUEZ_RED_SEA_LATS,
-              "rgba(0,229,160,0.95)", "✦ Route C — Suez Canal & Red Sea (Recommended)", width=3)
+              "rgba(0,229,160,0.95)", "✦ Route C — Suez Canal & Red Sea", width=3)
     add_route(_WEST_AFRICA_LONS, _WEST_AFRICA_LATS,
-              "rgba(139,92,246,0.9)", "✦ Route D — West Africa Regional (Recommended)", width=3)
+              "rgba(139,92,246,0.9)", "✦ Route D — West Africa Regional", width=3)
     shown_locations = ["Japan", "Suez Canal", "Red Sea", "Oman (Salalah)",
                        "Morocco", "Senegal (Dakar)", "Nigeria (Lagos)"]
 
