@@ -1065,7 +1065,7 @@ _lon_max = 145 if (not g40 or g75) else 70
 map_fig.update_layout(**{
     **PLOTLY_BASE, "height": 450,
     "margin": dict(l=0, r=0, t=0, b=0), "showlegend": True,
-    "legend": dict(orientation="h", y=-0.03, x=0.5, xanchor="center",
+    "legend": dict(orientation="h", y=-0.03, x=0.0, xanchor="left",
                    bgcolor="rgba(0,0,0,0)", font=dict(size=11, color="#64748b")),
     "geo": dict(
         projection_type="natural earth",
