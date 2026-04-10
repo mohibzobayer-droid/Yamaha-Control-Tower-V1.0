@@ -49,6 +49,13 @@ st.set_page_config(
 # ═══════════════════════════════════════════════════════════
 # SESSION STATE
 # ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════
+# BUNDLED API KEYS  (pre-loaded; APIs start DISABLED to save tokens)
+# ═══════════════════════════════════════════════════════════
+_BUNDLED_NEWS_KEY   = "b3bd5adf4a7c4e7380cce441387e0f60"
+_BUNDLED_CLAUDE_KEY = "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"
+_BUNDLED_OIL_KEY    = "HSAW4YT1CEXLOF6Y"
+
 _SS_DEFAULTS = {
     "prev_risk":            None,
     "prev_global":          None,
@@ -58,9 +65,9 @@ _SS_DEFAULTS = {
     "ai_narrative":         None,
     "ai_fetched_at":        None,
     "mobile":               False,
-    "news_api_enabled":     True,
-    "claude_enabled":       True,
-    "oil_api_enabled":      True,
+    "news_api_enabled":     False,
+    "claude_enabled":       False,
+    "oil_api_enabled":      False,
     "crude_oil_slider":     80,
     "oil_price_cache":      None,
     "oil_price_fetched_at": None,
@@ -69,12 +76,12 @@ for _k, _v in _SS_DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Load persisted API keys from disk once per session
+# Load persisted API keys from disk once per session; fall back to bundled keys
 if "api_keys_loaded" not in st.session_state:
     _disk = _load_saved_keys()
-    st.session_state["_news_api_key"]      = _disk.get("news_api_key",      "")
-    st.session_state["_claude_api_key"]    = _disk.get("claude_api_key",    "")
-    st.session_state["_crude_oil_api_key"] = _disk.get("crude_oil_api_key", "")
+    st.session_state["_news_api_key"]      = _disk.get("news_api_key",      "") or _BUNDLED_NEWS_KEY
+    st.session_state["_claude_api_key"]    = _disk.get("claude_api_key",    "") or _BUNDLED_CLAUDE_KEY
+    st.session_state["_crude_oil_api_key"] = _disk.get("crude_oil_api_key", "") or _BUNDLED_OIL_KEY
     st.session_state["api_keys_loaded"] = True
 
 # ═══════════════════════════════════════════════════════════
