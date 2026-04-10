@@ -714,7 +714,7 @@ if g75:
     status_label, status_color = "CRITICAL", "#ff4444"
     global_alloc, regional_alloc = 0, 100
     lead_time  = "3–5 d"
-    alert_msg  = "Hormuz blocked — Route C Suez Canal & Red Sea (Turkey Mersin → Suez Canal → Red Sea → Oman) and Route D West Africa Regional (Morocco → Atlantic Coast → W.Africa) fully activated."
+    alert_msg  = "Hormuz blocked — Route C Suez Canal & Red Sea (Japan → Indian Ocean → Suez Canal → Turkey Mersin → Red Sea → Oman) and Route D West Africa Regional (Japan → Indian Ocean → Cape of Good Hope → Morocco → W.Africa) fully activated."
     alert_type = "error"
 elif g40:
     status_label, status_color = "WARNING", "#ffb020"
@@ -726,7 +726,7 @@ else:
     status_label, status_color = "STABLE", "#00e5a0"
     global_alloc, regional_alloc = 70, 30
     lead_time  = "30–35 d"
-    alert_msg  = "Conditions nominal — Route A Mediterranean Sea (Turkey Izmir → Europe, 3–5 d) and Route E Global (Turkey Mersin → Suez → Hormuz → Arabian Gulf, 18–22 d) both active."
+    alert_msg  = "Conditions nominal — Route A Mediterranean Sea (Turkey Izmir → Europe, 3–5 d) and Route E Global (Japan → Indian Ocean → Malacca → Arabian Sea → Hormuz → Arabian Gulf, 18–22 d) both active."
     alert_type = "success"
 
 opt_score = 100 - (risk_score / 100 * 50)
@@ -982,27 +982,28 @@ locations = {
     "Europe":             dict(lat=51.9,  lon=4.5,   color="#e8ff47"),
     "Senegal (Dakar)":    dict(lat=14.7,  lon=-17.4, color="#a78bfa"),
     "Nigeria (Lagos)":    dict(lat=6.5,   lon=3.4,   color="#a78bfa"),
+    "Japan":              dict(lat=34.7,  lon=135.5, color="#e8ff47"),
 }
 
 # ── Route A — Mediterranean Sea (Turkey Izmir → Med → Gibraltar → Atlantic coast → Rotterdam) ──
 _MED_SEA_LONS = [27.1, 22.0, 16.0, 12.0, 8.0, 4.5, 0.5, -2.0, -5.35, -8.0, -9.5, -9.0, -5.0, -2.0, 1.5, 4.5]
 _MED_SEA_LATS = [38.4, 36.5, 37.5, 40.5, 41.0, 43.5, 40.5, 37.0, 35.9, 37.0, 39.5, 42.5, 47.5, 49.5, 51.0, 51.9]
 
-# ── Route E — Global (Hormuz): Turkey (Mersin) → Suez Canal → Red Sea → Gulf of Aden → Arabian Sea → around Oman → Strait of Hormuz → Arabian Gulf ──
-_HORMUZ_GLOBAL_LONS = [34.6, 33.0, 32.3, 34.0, 38.0, 43.5, 50.0, 57.5, 59.0, 58.0, 56.5, 55.3]
-_HORMUZ_GLOBAL_LATS = [36.8, 33.5, 31.3, 27.0, 20.0, 12.5, 12.0, 18.0, 21.5, 23.5, 26.5, 25.2]
+# ── Route E — Global (Hormuz): Japan → South China Sea → Malacca → Indian Ocean → Arabian Sea → around Oman → Strait of Hormuz → Arabian Gulf ──
+_HORMUZ_GLOBAL_LONS = [135.5, 121.0, 110.0, 103.8, 80.0, 65.0, 57.5, 59.0, 58.0, 56.5, 55.3]
+_HORMUZ_GLOBAL_LATS = [ 34.7,  30.0,  20.0,   1.3,  5.0, 12.0, 18.0, 21.5, 23.5, 26.5, 25.2]
 
-# ── Route C — Suez Canal & Red Sea (Turkey Mersin → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman) ──
-_SUEZ_RED_SEA_LONS = [34.6, 33.5, 32.3, 33.0, 36.5, 38.5, 42.0, 43.5, 50.0, 54.1]
-_SUEZ_RED_SEA_LATS = [36.8, 34.0, 31.3, 27.5, 23.5, 18.0, 14.5, 12.5, 15.0, 17.0]
+# ── Route C — Suez Canal & Red Sea (Japan → Indian Ocean → Suez Canal → Turkey Mersin → Red Sea → Gulf of Aden → Oman) ──
+_SUEZ_RED_SEA_LONS = [135.5, 121.0, 110.0, 103.8, 80.0, 65.0, 50.0, 43.5, 38.0, 32.3, 33.5, 34.6, 33.5, 32.3, 33.0, 36.5, 38.5, 42.0, 43.5, 50.0, 54.1]
+_SUEZ_RED_SEA_LATS = [34.7,  30.0,  20.0,   1.3,  5.0, 12.0, 12.0, 12.5, 20.0, 31.3, 34.0, 36.8, 34.0, 31.3, 27.5, 23.5, 18.0, 14.5, 12.5, 15.0, 17.0]
 
 # ── Route B — Strait of Gibraltar (Morocco → Gibraltar → Atlantic coast → Rotterdam) ──
 _GIBRALTAR_LONS = [-7.6, -6.0, -5.35, -6.5, -8.5, -9.5, -9.0, -5.0, -2.0, 1.5, 4.5]
 _GIBRALTAR_LATS = [33.6, 35.2, 36.14, 36.0, 37.0, 39.5, 42.5, 47.5, 49.5, 51.0, 51.9]
 
-# ── Route D — West Africa Regional (Morocco → Atlantic coast → Senegal → Liberia → Ivory Coast → Ghana → Nigeria) ──
-_WEST_AFRICA_LONS = [-7.6, -13.0, -17.4, -16.5, -14.5, -13.0, -10.5, -6.0, -4.0, -0.2, 3.4]
-_WEST_AFRICA_LATS = [33.6, 20.0,  14.7,  12.0,  10.5,   8.5,   6.3,   4.8,  5.3,  5.5,  6.5]
+# ── Route D — West Africa Regional (Japan → Indian Ocean → Cape of Good Hope → Morocco → Atlantic coast → Senegal → Nigeria) ──
+_WEST_AFRICA_LONS = [135.5, 110.0, 90.0, 75.0, 55.0, 18.4,  0.0, -10.0, -7.6, -13.0, -17.4, -16.5, -14.5, -13.0, -10.5, -6.0, -4.0, -0.2, 3.4]
+_WEST_AFRICA_LATS = [ 34.7,  10.0,  5.0, -15.0, -30.0, -34.4, -20.0,  10.0, 33.6,  20.0,  14.7,  12.0,  10.5,   8.5,   6.3,  4.8,  5.3,  5.5, 6.5]
 
 map_fig = go.Figure()
 
@@ -1023,9 +1024,9 @@ if not g40:
     add_route(_MED_SEA_LONS, _MED_SEA_LATS,
               "rgba(59,107,255,0.95)", "✦ Route A — Mediterranean Sea (Recommended)", width=3)
     add_route(_HORMUZ_GLOBAL_LONS, _HORMUZ_GLOBAL_LATS,
-              "rgba(232,255,71,0.9)", "✦ Route E — Global (Hormuz) (Recommended)", width=3)
-    shown_locations = ["Turkey (Izmir)", "Turkey (Mersin)", "Gibraltar", "Europe",
-                       "Suez Canal", "Red Sea", "Strait of Hormuz", "Arabian Gulf"]
+              "rgba(232,255,71,0.9)", "✦ Route E — Global (Hormuz)", width=3)
+    shown_locations = ["Turkey (Izmir)", "Japan", "Gibraltar", "Europe",
+                       "Strait of Hormuz", "Arabian Gulf"]
 
 elif not g75:
     # WARNING — Route B Strait of Gibraltar primary; Mediterranean Sea contingency
@@ -1041,7 +1042,7 @@ else:
               "rgba(0,229,160,0.95)", "✦ Route C — Suez Canal & Red Sea (Recommended)", width=3)
     add_route(_WEST_AFRICA_LONS, _WEST_AFRICA_LATS,
               "rgba(139,92,246,0.9)", "✦ Route D — West Africa Regional (Recommended)", width=3)
-    shown_locations = ["Turkey (Mersin)", "Suez Canal", "Red Sea", "Oman (Salalah)",
+    shown_locations = ["Japan", "Suez Canal", "Red Sea", "Oman (Salalah)",
                        "Morocco", "Senegal (Dakar)", "Nigeria (Lagos)"]
 
 # Draw only the markers relevant to the active route(s)
@@ -1058,8 +1059,9 @@ for name, c in locations.items():
         hovertemplate=f"<b>{name}</b><extra></extra>",
     ))
 
-# Expand lat/lon range to show West Africa route if needed
-_lat_min = -10 if g75 else -5
+# Expand lat/lon range to show West Africa + Cape of Good Hope route if needed, Japan always
+_lat_min = -40 if g75 else -5
+_lon_max = 145 if (not g40 or g75) else 70
 map_fig.update_layout(**{
     **PLOTLY_BASE, "height": 450,
     "margin": dict(l=0, r=0, t=0, b=0), "showlegend": True,
@@ -1073,7 +1075,7 @@ map_fig.update_layout(**{
         showocean=True, oceancolor="rgb(7,10,18)",
         showcountries=True, bgcolor="rgba(0,0,0,0)",
         lataxis=dict(range=[_lat_min, 60]),
-        lonaxis=dict(range=[-25, 70]),
+        lonaxis=dict(range=[-25, _lon_max]),
     ),
 })
 st.plotly_chart(map_fig, use_container_width=True)
@@ -1094,9 +1096,9 @@ metrics_df = pd.DataFrame({
     "Path": [
         "Turkey (Izmir) → Mediterranean Sea → Italy · Greece · Spain · France · Portugal",
         "Morocco → Strait of Gibraltar → Algeciras · Spain → All Europe",
-        "Turkey (Mersin) → Eastern Med → Suez Canal → Red Sea → Gulf of Aden → Oman",
-        "Morocco → Atlantic Coast → Senegal · Nigeria · Ghana · Ivory Coast",
-        "Turkey (Mersin) → Suez Canal → Red Sea → Gulf of Aden → Strait of Hormuz → Arabian Gulf",
+        "Japan → Indian Ocean → Suez Canal → Turkey (Mersin) → Red Sea → Gulf of Aden → Oman",
+        "Japan → Indian Ocean → Cape of Good Hope → Morocco → Atlantic Coast → Senegal · Nigeria · Ghana · Ivory Coast",
+        "Japan → Malacca Strait → Indian Ocean → Arabian Sea → Strait of Hormuz → Arabian Gulf",
     ],
     "Lead Time": ["3–5 d", "1–2 d", "8–10 d", "5–8 d", "18–22 d"],
     "Distance":  ["~2,500 nm", "~500 nm", "~3,200 nm", "~3,800 nm", "~4,800 nm"],
